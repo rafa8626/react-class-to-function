@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 const fs = require('fs/promises');
 const path = require('path');
 
@@ -21,7 +19,12 @@ const writeFile = async (file, content) => {
     }
 }
 
-const formatRenderContent = (renderLines) => renderLines.filter(line => !line.includes('render'));
+const formatRenderContent = (renderLines) => {
+    if (/s+}/i.test(renderLines[renderLines.length - 1])) {
+        renderLines.pop();
+    }
+    return renderLines.filter(line => !line.includes('render'));
+};
 
 const addStateWarning = (match) => [
     '//@todo Refactor this method using new states and consider using',
@@ -146,8 +149,7 @@ const convertFile = async (file) => {
     const data = await readFile(file);
 
     if (!classComponentRegex.test(data)) {
-        console.info(`${file} is not a class component...`);
-        return;
+        throw new Error(`${file} is not a class component...`);
     }
 
     const imports = [];
@@ -314,9 +316,9 @@ const convertFile = async (file) => {
 
     const fileName = path.parse(file);
     const newFile = `${fileName.name}.new${fileName.ext}`;
-
-    await writeFile(path.resolve(fileName.dir, newFile), replacedContent);
-    return newFile;
+    const absolutePath = path.resolve(fileName.dir, newFile);
+    await writeFile(absolutePath, replacedContent);
+    return absolutePath;
 }
 
 module.exports = convertFile;
