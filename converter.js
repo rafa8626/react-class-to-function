@@ -1,7 +1,7 @@
 const fs = require('fs/promises');
 const path = require('path');
 
-const classComponentRegexp = /(export\s+)?class\s+(.*?)\s+extends\s+(React.|Pure)?Component\s*(<(\w+),.*?>)? {/;
+const classComponentRegexp = /(export\s+)?class\s+(.*?)\s+extends\s+(React.|Pure)?Component\s*(<(\w+)(\s*,\s*(.*?))?>)?\s*{/;
 
 const renderRegexp = /(public )?(function )?render\s*\(\s*\)/i;
 
@@ -38,7 +38,7 @@ const addStateWarning = (match) => [
 const createComponentDefinition = (line) => {
     return line.replace(classComponentRegexp, (_, ...args) => {
         const functionName = args[1];
-        const genericType = args[5] || '';
+        const genericType = args[4] || '';
         let statement = ''
 
         if (args[0]) {
@@ -58,11 +58,18 @@ const createComponentDefinition = (line) => {
 
 const createSetterFromVariable = (variable) => `set${variable.charAt(0).toUpperCase()}${variable.slice(1)}`;
 
-/**
- * 
- * @todo: Check if we need to add casting of state variables
- */
-const createStateVariablesList = (stateLines) => {
+const formatStateDefinitions = (stateDefinitions) => {
+    stateDefinitions.pop();
+    stateDefinitions.shift();
+
+    return stateDefinitions.filter(e => !e.includes('//')).reduce((current, result) => {
+        const [variable, varType] = result.split(':');
+        current[variable.replace('?', '').trim()] = varType.replace(';', '').trim();
+        return current;
+    }, {});
+}
+
+const createStateVariablesList = (stateLines, stateDefinitionsMap = {}) => {
     const stateVars = stateLines
         .filter(line => line && !line.includes('constructor') && !line.includes('super(') && !line.includes('.bind(this)') && !/^\s*}$}/.test(line) && !/^\s*\/\/\s*/.test(line))
         .join("\n")
@@ -104,7 +111,8 @@ const createStateVariablesList = (stateLines) => {
             }
 
             if (count === 0) {
-                formattedStateVars[idx] = `const [${objectName}, ${objectSetter}] = useState({
+                const definition = stateDefinitionsMap[objectName] ? `<${stateDefinitionsMap[objectName]}>`: '';
+                formattedStateVars[idx] = `const [${objectName}, ${objectSetter}] = useState${definition}({
                     ${objectEls.join("\n")}
                 });`;
                 idx = 0;
@@ -122,7 +130,8 @@ const createStateVariablesList = (stateLines) => {
             variable = variable.trim();
             value = `${value}${rest.length > 0 ? `: ${rest.join('')}` : ''}`.trim().replace(/,$/, '');
             const setter = createSetterFromVariable(variable);
-            formattedStateVars.push(`const [${variable}, ${setter}] = useState(${value});`);
+            const definition = stateDefinitionsMap[variable] ? `<${stateDefinitionsMap[variable]}>`: '';
+            formattedStateVars.push(`const [${variable}, ${setter}] = useState${definition}(${value});`);
         }
     }
     return formattedStateVars;
@@ -165,6 +174,14 @@ const convertFile = async (file) => {
         imports.push('import { useEffect, useState } from \'react\';');
     }
 
+    // Find states definition (if any)
+    let stateDefinitionRegexp = '';
+    const classMatch = data.match(classComponentRegexp);
+    if (classMatch && classMatch[7]) {
+        const stateInterface = classMatch[7].replace(/\s*,\s*/, '').trim();
+        stateDefinitionRegexp = new RegExp(`(export )?interface ${stateInterface}`);
+    }
+
     // Remove import lines from original content
     const lines = data.replace(/import(.*?)from\s*((?:'|")[\w@\/\-\.]+(?:'|"));/gsi, '').trim().split('\n');
     let hasRender = false;
@@ -172,6 +189,7 @@ const convertFile = async (file) => {
     let hasMountEffect = false;
     let hasUnmountEffect = false;
     let hasRegularEffect = false;
+    let hasStateDefinition = false;
 
     let renderContent = [];
     let constructor = [];
@@ -179,6 +197,7 @@ const convertFile = async (file) => {
     let unmountEffect = [];
     let regularEffect = [];
     let otherLines = [];
+    let stateDefinition = [];
 
     let count = 0;
 
@@ -188,7 +207,11 @@ const convertFile = async (file) => {
         // Special cases, since it's not linked to brackets content
         const translationMatch = line.match(/withTranslate\((.*?)\)/);
         if (classComponentRegexp.test(line)) {
-            otherLines.push(createComponentDefinition(line));
+            const formattedLine = createComponentDefinition(line);
+            if (formattedLine.includes(': FC')) {
+                imports.push('import { FC } from \'react\';\n');
+            }
+            otherLines.push(formattedLine);
             continue;
         } else if (translationMatch) {
             hooks.push(`const { t } = useTranslation(${translationMatch[1]});\n`);
@@ -209,6 +232,24 @@ const convertFile = async (file) => {
             otherLines.push("<!-- %%RENDER%% --!>\n");
         } else if (/this\.setState/.test(line)) {
             hasNewEffects = true;
+        } else if (stateDefinitionRegexp.test(line)) {
+            hasStateDefinition = true;
+        }
+
+        if (hasStateDefinition) {
+            stateDefinition.push(line);
+
+            if (line.includes('{')) {
+                count += 1;
+            }
+            if (line.includes('}')) {
+                count -= 1;
+            }
+
+            if (count === 0) {
+                hasStateDefinition = false;
+                continue;
+            }
         }
 
         if (hasRender) {
@@ -286,7 +327,7 @@ const convertFile = async (file) => {
             }
         }
 
-        if (!hasConstructor && !hasMountEffect && !hasUnmountEffect && !hasRender && !hasRegularEffect) {
+        if (!hasConstructor && !hasMountEffect && !hasUnmountEffect && !hasRender && !hasRegularEffect && !hasStateDefinition) {
             otherLines.push(line);
         }
     }
@@ -295,13 +336,13 @@ const convertFile = async (file) => {
     createMainEffect(mountEffect, unmountEffect);
     formatEffect(regularEffect);
 
-    const content = `${imports.join("\n")}\n${otherLines.join("\n")}`; 
+    const content = `${imports.join("\n")}\n${otherLines.join("\n")}`;
 
     // NOTE: we use a function instead of straight replacement since we can find $ and that is a special
     //       token when using `replace()`; having a function avoid that token
     const replacedContent = content
         // Add new state variables and setters
-        .replace('<!-- %%STATES%% --!>', () => `${hooks.join("\n")}${createStateVariablesList(constructor).join("\n")}`)
+        .replace('<!-- %%STATES%% --!>', () => `${hooks.join("\n")}${createStateVariablesList(constructor, formatStateDefinitions(stateDefinition)).join("\n")}`)
         // Add effects
         .replace('<!-- %%MOUNT%% --!>', () => mountEffect.join("\n"))
         .replace('<!-- %%EFFECT%% --!>', () => regularEffect.join("\n"))
