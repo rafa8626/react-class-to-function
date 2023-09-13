@@ -20,7 +20,7 @@ const writeFile = async (file, content) => {
 }
 
 const formatRenderContent = (renderLines) => {
-    if (/s+}/i.test(renderLines[renderLines.length - 1])) {
+    if (/\s+}/i.test(renderLines[renderLines.length - 1])) {
         renderLines.pop();
     }
     return renderLines.filter(line => !line.includes('render'));
@@ -299,7 +299,7 @@ const convertFile = async (file) => {
     //       token when using `replace()`; having a function avoid that token
     const replacedContent = content
         // Add new state variables and setters
-        .replace('<!-- %%STATES%% --!>', () => createStateVariablesList(constructor).join("\n"))
+        .replace('<!-- %%STATES%% --!>', () => `${hooks.join("\n")}${createStateVariablesList(constructor).join("\n")}`)
         // Add effects
         .replace('<!-- %%MOUNT%% --!>', () => mountEffect.join("\n"))
         .replace('<!-- %%EFFECT%% --!>', () => regularEffect.join("\n"))
@@ -312,7 +312,7 @@ const convertFile = async (file) => {
         .replace(/(=>\s*){2,}/gi, '=> ')
         // Settle this.setState and use new methods
         .replace(/(this\.setState)/gms, (_, states) => addStateWarning(states.trim()).join("\n"))
-        .replace(/this\./gi, '');
+        .replace(/this\.(state\.)?/gi, '');
 
     const fileName = path.parse(file);
     const newFile = `${fileName.name}.new${fileName.ext}`;
