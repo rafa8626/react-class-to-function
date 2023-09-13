@@ -1,6 +1,6 @@
 {
   "name": "react-class-to-function",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Node script that converts React class components to functional",
   "main": "index.js",
   "scripts": {
@@ -16,5 +16,8 @@
   "license": "MIT",
   "dependencies": {
     "commander": "^11.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   }
 }
