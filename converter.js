@@ -29,7 +29,7 @@ const formatRenderContent = (renderLines) => {
 };
 
 const addStateWarning = (match) => [
-    '//@todo Refactor this method using new states and consider using',
+    '// @todo Refactor this method using new states and consider using',
     '// \`use-immer\` hook instead of \`produce\` if setState is using it.',
     '// Also, consider creating new effects if the state has a callback after the setter',
     match
