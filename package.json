@@ -2,20 +2,27 @@
   "name": "react-class-to-function",
   "version": "0.0.1",
   "description": "Node script that converts React class components to functional",
-  "main": "index.js",
+  "main": "index.ts",
   "scripts": {
+    "convert": "ts-node index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
     "node",
     "react",
     "class",
-    "functional"
+    "functional",
+    "typescript",
+    "ts-node",
+    "converter"
   ],
   "author": "Rafael Miranda <rafa8626@gmail.com>",
   "license": "MIT",
   "dependencies": {
     "commander": "^11.0.0"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.1"
   },
   "engines": {
     "node": ">=16.0.0"

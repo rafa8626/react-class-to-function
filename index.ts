@@ -1,13 +1,12 @@
 #!/usr/bin/env node
-
-const convertFile = require('./converter');
-const path = require('path');
-const fs = require('fs');
-const { program } = require('commander');
+import fs from 'fs';
+import path from 'path';
+import convertFile from './converter';
+import { program } from 'commander';
 
 const expectedExtensions = ['.tsx', '.ts', '.jsx', '.js'];
 
-function* walkSync(dir) {
+function* walkSync(dir: string): Generator<string> {
     const files = fs.readdirSync(dir, { withFileTypes: true });
     for (const file of files) {
         const absolutePath = path.resolve(dir, file.name);
@@ -19,11 +18,12 @@ function* walkSync(dir) {
     }
 }
 
-const converter = async (target) => {
+const converter = async (target: string) => {
     try {
         await convertFile(target);
     } catch (e) {
-        console.error(e.message);
+        const message = e instanceof Error ? e.message : String(e);
+        console.error(message);
     }
 }
 
