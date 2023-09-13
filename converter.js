@@ -1,7 +1,9 @@
 const fs = require('fs/promises');
 const path = require('path');
 
-const classComponentRegex = /(export\s+)?class\s+(.*?)\s+extends\s+(React.|Pure)?Component\s*(<(\w+),.*?>)? {/;
+const classComponentRegexp = /(export\s+)?class\s+(.*?)\s+extends\s+(React.|Pure)?Component\s*(<(\w+),.*?>)? {/;
+
+const renderRegexp = /(public )?(function )?render\s*\(\s*\)/i;
 
 const readFile = async (file) => {
     try {
@@ -20,10 +22,10 @@ const writeFile = async (file, content) => {
 }
 
 const formatRenderContent = (renderLines) => {
-    if (/\s+}/i.test(renderLines[renderLines.length - 1])) {
+    if (/^\s+}$/i.test(renderLines[renderLines.length - 1])) {
         renderLines.pop();
     }
-    return renderLines.filter(line => !line.includes('render'));
+    return renderLines.filter(line => !renderRegexp.test(line));
 };
 
 const addStateWarning = (match) => [
@@ -34,7 +36,7 @@ const addStateWarning = (match) => [
 ];
 
 const createComponentDefinition = (line) => {
-    return line.replace(classComponentRegex, (_, ...args) => {
+    return line.replace(classComponentRegexp, (_, ...args) => {
         const functionName = args[1];
         const genericType = args[5] || '';
         let statement = ''
@@ -148,7 +150,7 @@ const createMainEffect = (mountLines = [], unmountLines = []) => {
 const convertFile = async (file) => {
     const data = await readFile(file);
 
-    if (!classComponentRegex.test(data)) {
+    if (!classComponentRegexp.test(data)) {
         throw new Error(`${file} is not a class component...`);
     }
 
@@ -185,7 +187,7 @@ const convertFile = async (file) => {
     for (const line of lines) {
         // Special cases, since it's not linked to brackets content
         const translationMatch = line.match(/withTranslate\((.*?)\)/);
-        if (classComponentRegex.test(line)) {
+        if (classComponentRegexp.test(line)) {
             otherLines.push(createComponentDefinition(line));
             continue;
         } else if (translationMatch) {
@@ -202,7 +204,7 @@ const convertFile = async (file) => {
         } else if (/(public )?(function )?componentDidUpdate\s*\(\s*.*?\s*\)/i.test(line)) {
             hasRegularEffect = true;
             otherLines.push("<!-- %%EFFECT%% --!>\n");
-        } else if (/(public )?(function )?render\s*\(\s*\)/i.test(line)) {
+        } else if (renderRegexp.test(line)) {
             hasRender = true;
             otherLines.push("<!-- %%RENDER%% --!>\n");
         } else if (/this\.setState/.test(line)) {
