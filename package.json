@@ -1,7 +1,7 @@
 {
-  "name": "react-class-to-function",
+  "name": "react-class2function",
   "version": "0.0.1",
-  "description": "Node script that converts React class components to functional",
+  "description": "Typescript script that converts React class components to functional components",
   "main": "index.ts",
   "scripts": {
     "convert": "ts-node index.ts",
