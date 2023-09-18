@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import fs from 'fs';
 import path from 'path';
-import convertFile from './converter';
 import { program } from 'commander';
+import { convertFile } from './parser';
 
 const expectedExtensions = ['.tsx', '.ts', '.jsx', '.js'];
 
@@ -18,9 +18,9 @@ function* walkSync(dir: string): Generator<string> {
     }
 }
 
-const converter = async (target: string) => {
+const converter = async (target: string, generateContentOnly = false) => {
     try {
-        await convertFile(target);
+        await convertFile(target, generateContentOnly);
     } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
         console.error(message);
@@ -28,7 +28,14 @@ const converter = async (target: string) => {
 }
 
 const main = async () => {
-    program.option('-t, --target <file|directory>');
+    program
+        .option('-t, --target <file|directory>', 'The file/directory where files will be convert')
+        .option('--only-content', 'Used to determine if new content should be returned, rather than saved')
+        .option('-i, --ignore <files>', `File(s) to be ignored for converter when dealing with directories,
+            separated by comma and NO SPACES.
+            (by default, all files with tsx and jsx extensions that contain the \`extends Component\` 
+            or \`extends React.Component\` will be converted)`);
+
     program.parse();
     const options = program.opts();
 
@@ -40,12 +47,17 @@ const main = async () => {
     const isDir = stats.isDirectory();
 
     if (isDir) {
+        const ignoredFiles = (options.ignore || '')
+            .split(',')
+            .map((file: string) => path.resolve(options.target, file));
+
         for (const file of walkSync(options.target)) {
-            await converter(file);
+            if (ignoredFiles.length > 0 && !ignoredFiles.includes(file)) {
+                await converter(file, options['only-content']);
+            }
         }
-    
     } else {
-        await converter(options.target);
+        await converter(options.target, options['only-content']);
     }
 }
 

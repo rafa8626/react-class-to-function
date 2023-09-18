@@ -1,0 +1,34 @@
+import React, { Component } from 'react';
+
+const App = () => {
+  const alertName = (
+    param1,
+    param2,
+    param3
+  ) => {
+    alert(param1, param2, param3);
+    console.log('success!')
+  };
+
+  const anotherMethod = async () => {
+    console.log('test')
+  }
+
+  const nextCall = ( ) => {
+    return null;
+  }
+
+  const x = nextCall ();
+  const y = anotherMethod();
+
+  return (
+    <div>
+      <h3>This is a Component</h3>
+      <button onClick={alertName}>
+        Alert
+      </button>
+    </div>
+  );
+};
+
+export default App;

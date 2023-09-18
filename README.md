@@ -42,6 +42,12 @@ Simply use the following command:
 npm run convert -- -t [FILE OR DIRECTORY TO CONVERT]
 ```
 
+If you want to just grab the replaced content and save it somewhere else, or use it for your own purposes, execute:
+
+```shell
+npm run convert -- -t [FILE OR DIRECTORY TO CONVERT] --only-content
+```
+
 ## Limitations
 
 ### Conversion of other lifecycle steps omitted
@@ -54,7 +60,7 @@ The script does NOT migrate special lifecycle steps, such as:
 
 since they are rarely used and it will be better for the developers to migrate them manually once the script has taken shape; mostly, because, if many conditions are satisfied, they may not be required at all. But that's a call to be made by developers.
 
-### `this.setState` refactor not being considered
+### `this.setState` migration not being considered
 
 This script addresses most of the points discussed in the [migration steps listed above](#what-is-involved-in-the-migration); however, the most problematic step to deal with is the conversion of `this.setState` to new state setters. The main reason is because there are so many variations on how this could happen (including the use of [Immer's `produce`](https://immerjs.github.io/immer/example-setstate/)) and it will be impossible for the script to figure out the correct way to refactor this.
 

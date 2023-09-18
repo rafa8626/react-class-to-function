@@ -129,5 +129,8 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
+# Specific to the project
 *.tsx
 *.jsx
+*.js
+*.bak

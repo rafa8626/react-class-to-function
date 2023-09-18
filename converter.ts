@@ -1,20 +1,12 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { addStateWarning, createSetterFromVariable, readFile } from './utils';
 
 const classComponentRegexp = /(export\s+)?class\s+(.*?)\s+extends\s+(React.|Pure)?Component\s*(<(\w+)(\s*,\s*(.*?))?>)?\s*{/;
 
 const renderRegexp = /(public )?(function )?render\s*\(\s*\)/i;
 
-const readFile = async (file: string) => {
-    try {
-        return await fs.readFile(file, { encoding: 'utf8' });
-    } catch (e) {
-        const message = e instanceof Error ? e.message : String(e);
-        throw new Error(`Error while reading file: ${message}`);
-    }
-}
-
-const writeFile = async (file: string, content: string) => {
+export const writeFile = async (file: string, content: string) => {
     try {
         await fs.writeFile(file, content);
     } catch (e) {
@@ -30,31 +22,62 @@ const formatRenderContent = (renderLines: string[]) => {
     return renderLines.filter(line => !renderRegexp.test(line));
 };
 
-const addStateWarning = (match: string) => [
-    '// @todo Refactor this method using new states and consider using',
-    '// \`use-immer\` hook instead of \`produce\` if setState is using it.',
-    '// Also, consider creating new effects if the state has a callback after the setter',
-    match
-];
 
-const createComponentDefinition = (line: string) => line.replace(classComponentRegexp, (_, ...args) => {
+
+const createComponentDefinition = (line: string, hasProps = false) => line.replace(classComponentRegexp, (_, ...args) => {
     const functionName = args[1];
     const genericType = args[4] || '';
-    return `${args[0] || ''}const ${functionName} = (props)${genericType ? `: FC<${genericType}>` : ''} => {`;
+    return `${args[0] || ''}const ${functionName} = (${hasProps ? 'props' : ''})${genericType ? `: FC<${genericType}>` : ''} => {`;
 });
-
-const createSetterFromVariable = (variable: string) => `set${variable.charAt(0).toUpperCase()}${variable.slice(1)}`;
 
 const formatStateDefinitions = (stateDefinitions: string[]) => {
     // Remove first and last lines since they are the containers fo definitions
     stateDefinitions.pop();
     stateDefinitions.shift();
+    const map: Record<string, unknown> = {};
 
-    return stateDefinitions.filter(e => !e.includes('//')).reduce((current, result) => {
-        const [variable, varType] = result.split(':');
-        current[variable.replace('?', '').trim()] = varType.replace(';', '').trim();
-        return current;
-    }, {} as Record<string, unknown>);
+    let count = 0;
+    let objectFound = false;
+    let objectName = '';
+    let objectEls: string[] = [];
+
+    for (const line of stateDefinitions.filter(e => !e.includes('//'))) {
+        if (/\s+{$/m.test(line)) {
+            const [variable] = line.split(':');
+            objectName = variable.replace('?', '').trim();
+            objectFound = true;
+        }
+
+        if (objectFound) {
+            objectEls.push(line);
+
+            if (line.includes('{')) {
+                count += 1;
+            }
+            if (line.includes('}')) {
+                count -= 1;
+            }
+
+            if (count === 0) {
+                objectEls.shift();
+                objectEls.pop();
+                map[objectName] = `{ ${ objectEls.join("\n")} }`;
+                objectName = '';
+                objectEls = [];
+                objectFound = false;
+                count = 0;
+            }
+        } else {
+            let [variable, value, ...rest] = line.split(':');
+            if (!variable || !value) {
+                continue;
+            }
+            variable = variable.trim();
+            value = `${value.replace(';', '').trim()}${rest.length > 0 ? `: ${rest.join(':')}` : ''}`.trim();
+            map[variable.replace('?', '').trim()] = value.trim();
+        }
+    }
+    return map;
 }
 
 const createStateVariablesList = (stateLines: string[], stateDefinitionsMap: Record<string, unknown> = {}) => {
@@ -73,18 +96,24 @@ const createStateVariablesList = (stateLines: string[], stateDefinitionsMap: Rec
 
     let count = 0;
     let objectFound = false;
+    let multilineFound = false;
     let idx = 0;
     let objectSetter = '';
     let objectName = '';
 
     for (let i = 0, total = newLines.length; i < total; i++) {
         const line = newLines[i];
-        if (/\s+{$/m.test(line)) {
+        const match = line.match(/\s+({|:)$/m);
+        if (match) {
             const [variable] = line.split(':');
             objectName = variable.trim();
             objectSetter = createSetterFromVariable(objectName);
             idx = stateVars.length - 1;
-            objectFound = true;
+            if (match[1] === '{') {
+                objectFound = true;
+            } else {
+                multilineFound = true;
+            }
             count = 0;
             continue;
         } 
@@ -96,6 +125,28 @@ const createStateVariablesList = (stateLines: string[], stateDefinitionsMap: Rec
                 count += 1;
             }
             if (line.includes('}')) {
+                count -= 1;
+            }
+
+            if (count === 0) {
+                const definition = stateDefinitionsMap[objectName] ? `<${stateDefinitionsMap[objectName]}>`: '';
+                formattedStateVars[idx] = `const [${objectName}, ${objectSetter}] = useState${definition}({
+                    ${objectEls.join("\n")}
+                });`;
+                idx = 0;
+                objectSetter = '';
+                objectName = '';
+                objectEls = [];
+                objectFound = false;
+                continue;
+            }
+        } else if (multilineFound) {
+            objectEls.push(line);
+
+            if (line.includes("\n")) {
+                count += 1;
+            }
+            if (line.includes(';')) {
                 count -= 1;
             }
 
@@ -145,7 +196,7 @@ const createMainEffect = (mountLines: string[] = [], unmountLines: string[] = []
     }
 }
 
-const convertFile = async (file: string) => {
+const convertFile = async (file: string, generateContentOnly = false) => {
     const data = await readFile(file);
 
     if (!classComponentRegexp.test(data)) {
@@ -153,14 +204,24 @@ const convertFile = async (file: string) => {
     }
 
     const imports: string[] = [];
-    const matches = data.matchAll(/import(.*?)from\s*((?:'|")[\w@\/\-\.]+(?:'|"));/gsi);
+    const matches = data.matchAll(/import(.*?)from\s*((?:'|")([\w@\/\-\.]+)(?:'|"));/gsi);
     for (const match of matches) {
+        if (match[1].includes('Component') && match[3] === 'react') {
+            match[0] = `import ${match[1].replace(/(\,\s*\{)?\s*(Pure)?Component\s*\}?\,?/, '')}from ${match[2]};`;
+        }
         imports.push(match[0]);
     }
     
-    // Add useEffect and useState imports (this can be taken care of with ESLint cleanups)
-    if (imports.length > 0) {
-        imports.push('import { useEffect, useState } from \'react\';');
+    // Add useEffect and useState imports if (this can be merged accordingly with ESLint rules)
+    const reactImports = [];
+    if (data.includes('this.setState')) {
+        reactImports.push('useState');
+    }
+    if (/componentDidMount|componentWillUnmount|componentDidUpdate/.test(data)) {
+        reactImports.push('useEffect');
+    }
+    if (reactImports.length > 0) {
+        imports.push(`import { ${reactImports.join(', ')} } from \'react\';\n`);
     }
 
     // Find states definition (if any)
@@ -170,6 +231,9 @@ const convertFile = async (file: string) => {
         const stateInterface = classMatch[7].replace(/\s*,\s*/, '').trim();
         stateDefinitionRegexp = new RegExp(`(export )?interface ${stateInterface}`);
     }
+
+    // Find if component needs props (determined by `this.props`)
+    const hasProps = data.includes('this.props');
 
     // Remove import lines from original content
     const lines = data.replace(/import(.*?)from\s*((?:'|")[\w@\/\-\.]+(?:'|"));/gsi, '').trim().split('\n');
@@ -192,12 +256,11 @@ const convertFile = async (file: string) => {
 
     let count = 0;
 
-
     for (const line of lines) {
         // Special cases, since it's not linked to brackets content
         const translationMatch = line.match(/withTranslate\((.*?)\)/);
         if (classComponentRegexp.test(line)) {
-            const formattedLine = createComponentDefinition(line);
+            const formattedLine = createComponentDefinition(line, hasProps);
             if (formattedLine.includes(': FC')) {
                 imports.push('import { FC } from \'react\';\n');
             }
@@ -337,13 +400,18 @@ const convertFile = async (file: string) => {
         // Add new render content
         .replace('<!-- %%RENDER%% --!>', () => formatRenderContent(renderContent).join("\n"))
         // Change public/private/protected methods to regular ones
-        .replace(/(?:private|public|protected)\s*(async)?\s*([\w]+)\s*=?\s*\((.*?)\)(.*?)(?:=>)?{/gmsi, (_, token, method, params, def) => `const ${method} = ${token || ''}(${params})${def || ''} => {`)
+        .replace(/(?:private|public|protected)\s*(async)?\s*(?:function)?\s*([\w]+)\s*=?\s*\((.*?)\)(.*?)(?:=>)?{/gmsi, (_, token, method, params, def) => `const ${method} = ${token || ''}(${params || ''})${def || ''} => {`)
+        .replace(/(^\s*)([\w]+)\s+=\s+\((.*?)\)(.*?)\s+=>\s+\{/gmsi, (_, space, method, params, def) => `${space}const ${method} = (${params || ''})${def || ''} => {`)
         .replace(/(?:private|public|protected)\s*([\w]+)(.*?)=(.*?);\n/gmsi, (_, g1, g2, g3) => `let ${g1}${g2}=${g3};`)
         // Remove `this.` keyword everywhere and fix some replacement issues
         .replace(/(=>\s*){2,}/gi, '=> ')
         // Settle this.setState and use new methods
         .replace(/(this\.setState)/gms, (_, states) => addStateWarning(states.trim()).join("\n"))
         .replace(/this\.(state\.)?/gi, '');
+
+    if (generateContentOnly) {
+        return replacedContent;
+    }
 
     const fileName = path.parse(file);
     const newFile = `${fileName.name}.new${fileName.ext}`;

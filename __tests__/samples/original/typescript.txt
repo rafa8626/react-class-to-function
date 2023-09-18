@@ -1,0 +1,200 @@
+import { Component } from '@alpha/test';
+import b from '@beta/test';
+import {
+    c,
+    d as NewComponent,
+    d as FormApi,
+} from 'common/library';
+import { createRef, MutableRefObject, PureComponent, ReactElement, SetStateAction } from 'react';
+import { CONST1, CONST2 } from '../shared/library';
+
+import './stylesheet.scss';
+export enum MyEnum {
+    Test1 = 'test1',
+    Test2 = 'test2',
+}
+
+interface Props {
+    a: boolean;
+    b: boolean;
+    c: boolean;
+    d: boolean;
+    load: () => void;
+}
+
+interface OtherProps {
+    items: {isNew: boolean }[];
+}
+
+export interface State {
+    a: boolean;
+    b?: {
+        c: boolean;
+        d: 'right' | 'left';
+        e: boolean;
+    };
+    f: boolean;
+    g?: boolean;
+    h: MyEnum;
+    i: boolean;
+    j: { items: string[]; ignore: { items: string[] } }
+}
+
+class MyComponent extends PureComponent<Props, State> {
+    public constructor(props) {
+        super(props);
+        this.state = {
+            a: false,
+            b: {
+                c: false,
+                d: 'right',
+                e: false,
+            },
+            f: false,
+            g: null,
+            h: MyEnum.Test1,
+            i:
+                this.props.a !== 'YES' &&
+                this.props.b !== 'YES' &&
+                this.props.c !== 'YES' &&
+                this.props.d !== 'YES',
+            j: { items: [], ignore: { items: [] } },
+        };
+
+        this.loadWindow = this.loadWindow.bind(this);
+        this.moreDetails = this.moreDetails.bind(this);
+        this.getResult = this.getResult.bind(this);
+        this.loadData = this.loadData.bind(this);
+    }
+    // This is a comment that I find useful for this variable
+    // Let's see what's its use
+    private myVariable: MutableRefObject<FormApi<{
+        x: string;
+    }> | null> = createRef();
+
+    private anotherRef: MutableRefObject<Function | null> = createRef();
+    public componentDidMount(): void {
+        document.title = this.props.t('my.id');
+        const { a } = this.props.match.params;
+
+        this.loadData(a);
+        window.addEventListener('onload', this.loadWindow);
+    }
+
+    public componentWillUnmount(): void {
+        window.removeEventListener('onload', this.loadWindow);
+    }
+
+    loadWindow(): void {
+        this.setState((prevState) => ({
+            ...prevState,
+            a: MyEnum.Test2,
+            b: null,
+            c: 'en-US',
+        }));
+    }
+
+    public componentDidUpdate(prevProps: Props, prevStates: State): void {
+        const { a: prevProp } = prevProps.match.params;
+        const { b: prevState } = this.props.match.params;
+
+        if (a !== b) {
+            this.setState((prevState) => ({
+                ...prevState,
+                a: false,
+            }));
+        }
+
+        if (
+            prevStates.a !== this.state.a ||
+            prevState.b !== this.state.b ||
+            prevState.c !== this.state.c
+        ) {
+            this.setState(
+                (prevState) => ({ ...prevState, f: true }),
+                () => this.props.load()
+            );
+        }
+    }
+
+    /**
+     * This is a long description
+     *
+     * 
+     * @param param1 Unknow string
+     * @return void
+     */
+    private moreDetails(
+        param1: MyEnum,
+        param2?: boolean,
+        param3: string = 'en-US'
+    ): void {
+        this.setState(
+            produce(this.state, (draftState): void => {
+                draftState.a = param1;
+                draftState.b = false;
+                draftState.c = param3;
+            })
+        );
+    }
+
+    ///-------------Function - start
+    protected async function loadData(result): Promise<void> {
+        this.props.load();
+        this.setState({ j: result });
+    }
+
+    ///-------------Function - End
+
+    render(): ReactElement {
+        const list = ['apple', 'banana'];
+        const {
+            b,
+            f: f1,
+        } = this.state;
+        const {
+            a,
+            b,
+            c,
+        } = this.props;
+
+        const internalMethod = () => {
+            const myObj = {
+                x: a,
+                y: b,
+                z: c,
+            };
+            this.setState(
+                produce(this.state, (draftState): void => {
+                    draftState.j = f1 || 'YES';
+                }),
+                () => {
+                    this.loadData(MyEnum.Test2);
+                }
+            );
+        };
+        const internalVar = () => this.getResult(c);
+
+        return (
+            <>
+                {/* HTML ------------------------ > Start */}
+                {!readOnlyMode && isDcfClosed && (
+                    <div>
+                        <h3>This is a Component</h3>
+                        <button onClick={this.alertName}>
+                        Alert
+                        </button>
+                    </div>
+                )}
+
+                {/* HTML ------------------------ > End */}
+            </>
+        );
+    }
+}
+
+const isNew = (x: OtherProps): boolean => {
+    return (x.items, { isNew: true });
+};
+
+export default MyComponent;
