@@ -1,35 +1,32 @@
 import { Component } from '@alpha/test';
 import b from '@beta/test';
 import {
-  c,
-  d as NewComponent,
-  d as FormApi,
+    c as NewComponent,
+    d as FormApi,
 } from 'common/library';
-import { createRef, MutableRefObject, ReactElement, SetStateAction } from 'react';
-import { CONST1, CONST2 } from '../shared/library';
-import { useState, useEffect } from 'react';
-import { FC } from 'react';
+import { createRef, MutableRefObject, ReactElement, useEffect, useState } from 'react';
+
 import './stylesheet.scss';
 export enum MyEnum {
-  Test1 = 'test1',
-  Test2 = 'test2',
+    Test1 = 'test1',
+    Test2 = 'test2',
 }
 
 interface Props {
-  a: boolean;
-  b: boolean;
-  c: boolean;
-  d: boolean;
-  load: () => void;
+    a: boolean;
+    b: boolean;
+    c: boolean;
+    d: boolean;
+    load: () => void;
 }
 
 interface OtherProps {
-  items: {isNew: boolean }[];
+    items: {isNew: boolean }[];
 }
 
-const MyComponent = (props): FC<Props> => {
+function MyComponent(props: Props) {
   const [a, setA] = useState<boolean>(false);
-  const [b, setA] = useState<{
+  const [b, setB] = useState<{
       c: boolean;
       d: 'right' | 'left';
       e: boolean;
@@ -55,7 +52,7 @@ const MyComponent = (props): FC<Props> => {
   let anotherRef: MutableRefObject<Function | null> = createRef();
   // @todo: Review content of this effect
   useEffect(() => {
-    document.title = props.t('my.id');
+    document.title = props.t(myVariable);
     const { a } = props.match.params;
 
     loadData(a);
@@ -67,132 +64,133 @@ const MyComponent = (props): FC<Props> => {
   }, []);
 
   const loadWindow = (): void => {
-      // @todo Refactor this method using new states and consider using
-      // \`use-immer\` hook instead of \`produce\` if setState is using it.
-      // Also, consider creating new effects if the state has a callback after the setter
-      setState((prevState) => ({
-          ...prevState,
-          a: MyEnum.Test2,
-          b: null,
-          c: 'en-US',
-      }));
+    // @todo Refactor this method using new states and consider using
+    // `use-immer` hook instead of `produce` if setState is using it.
+    // Also, consider creating new effects if the state has a callback after the setter
+    setState((prevState) => ({
+        ...prevState,
+        a: MyEnum.Test2,
+        b: null,
+        c: 'en-US',
+    }));
   };
 
   // @todo: Review content of this effect
   useEffect(() => {
-      const { a: prevProp } = prevProps.match.params;
-      const { b: prevState } = props.match.params;
+    const { a: prevProp } = prevProps.match.params;
+    const { b: prevState } = props.match.params;
 
-      if (a !== b) {
-        // @todo Refactor this method using new states and consider using
-        // \`use-immer\` hook instead of \`produce\` if setState is using it.
-        // Also, consider creating new effects if the state has a callback after the setter
-        setState((prevState) => ({
+    if (prevProp !== prevState) {
+      // @todo Refactor this method using new states and consider using
+      // `use-immer` hook instead of `produce` if setState is using it.
+      // Also, consider creating new effects if the state has a callback after the setter
+      setState((prevState) => ({
           ...prevState,
           a: false,
-        }));
-      }
+      }));
+    }
 
-      if (
-          prevStates.a !== a ||
-          prevState.b !== b ||
-          prevState.c !== c
-      ) {
-          // @todo Refactor this method using new states and consider using
-          // \`use-immer\` hook instead of \`produce\` if setState is using it.
-          // Also, consider creating new effects if the state has a callback after the setter
-          setState(
-              (prevState) => ({ ...prevState, f: true }),
-              () => props.load()
-          );
-      }
-  });
-
-  /**
-    * This is a long description
-    *
-    * 
-    * @param param1 Unknow string
-    * @return void
-    */
-  const moreDetails = (
-      param1: MyEnum,
-      param2?: boolean,
-      param3: string = 'en-US'
-  ): void => {
+    if (
+        prevStates.a !== a ||
+        prevState.b !== b ||
+        prevState.c !== c
+    ) {
       // @todo Refactor this method using new states and consider using
-      // \`use-immer\` hook instead of \`produce\` if setState is using it.
+      // `use-immer` hook instead of `produce` if setState is using it.
       // Also, consider creating new effects if the state has a callback after the setter
       setState(
-          produce(state, (draftState): void => {
-              draftState.a = param1;
-              draftState.b = false;
-              draftState.c = param3;
-          })
+          (prevState) => ({ ...prevState, f: true }),
+          () => props.load()
       );
-  };
+    }
+  });
 
-  ///-------------Function - start
-  const loadData = async (result): Promise<void> => {
-    props.load();
-    // @todo Refactor this method using new states and consider using
-    // `use-immer` hook instead of `produce` if setState is using it.
-    // Also, consider creating new effects if the state has a callback after the setter
-    setState({ j: result });
-  };
-
-  ///-------------Function - End
-
-  const list = ['apple', 'banana'];
-  const {
-      b,
-      f: f1,
-  } = state;
-  const {
-      a,
-      b,
-      c,
-  } = props;
-
-  const internalMethod = () => {
-    const myObj = {
-        x: a,
-        y: b,
-        z: c,
+    /**
+     * This is a long description
+     *
+     * 
+     * @param param1 Unknow string
+     * @param param2 Unknow boolean (optional)
+     * @param param3 Unknow string
+     * @return void
+     */
+    const moreDetails = (param1: MyEnum, param2?: boolean, param3: string = 'en-US'): void => {
+      // @todo Refactor this method using new states and consider using
+      // `use-immer` hook instead of `produce` if setState is using it.
+      // Also, consider creating new effects if the state has a callback after the setter
+      setState(
+        produce(state, (draftState): void => {
+            draftState.a = param1;
+            draftState.b = param2;
+            draftState.c = param3;
+        })
+      );
     };
 
-    // @todo Refactor this method using new states and consider using
-    // \`use-immer\` hook instead of \`produce\` if setState is using it.
-    // Also, consider creating new effects if the state has a callback after the setter
-    setState(
+    const loadData = async (result): Promise<void> => {
+      props.load();
+      // @todo Refactor this method using new states and consider using
+      // `use-immer` hook instead of `produce` if setState is using it.
+      // Also, consider creating new effects if the state has a callback after the setter
+      setState({ j: result });
+    };
+
+    const list = ['apple', 'banana'];
+    const {
+      b: newB,
+      f: f1,
+    } = state;
+    const {
+      a,
+      b: propB,
+      c,
+    } = props;
+
+    const internalMethod = () => {
+      const myObj = {
+          x: a,
+          y: b,
+          z: c,
+      };
+      // @todo Refactor this method using new states and consider using
+      // `use-immer` hook instead of `produce` if setState is using it.
+      // Also, consider creating new effects if the state has a callback after the setter
+      setState(
         produce(state, (draftState): void => {
-            draftState.j = f1 || 'YES';
+          draftState.j = f1 || newB;
+          draftState.a = propB;
+          draftState.j = myObj;
         }),
         () => {
-            loadData(MyEnum.Test2);
+          if (list.includes(myObj.x)) {
+              loadData(MyEnum.Test2);
+          }
         }
-    );
-  };
-  const internalVar = () => getResult(c);
+      );
+    };
 
-  return (
-    <>
-        {/* HTML ------------------------ > Start */}
-        {!readOnlyMode && isDcfClosed && (
+    return (
+      <>
+        <Component test={isNew()} ref={anotherRef} />
+        <NewComponent onClick={internalMethod}>
+          {/* HTML ------------------------ > Start */}
+          {b() && (
             <div>
-                <h3>This is a Component</h3>
-                <button onClick={alertName}>
+              <h3>This is a Component</h3>
+              <button onClick={alertName}>
                 Alert
-                </button>
+              </button>
             </div>
-        )}
-        {/* HTML ------------------------ > End */}
-    </>
-  );
+          )}
+
+          {/* HTML ------------------------ > End */}
+        </NewComponent>
+      </>
+    );
 }
 
-const isNew = (x: OtherProps): boolean => {
-    return (x.items, { isNew: true });
+const isNew = (x?: OtherProps): boolean => {
+    return ((x?.items || {}), { isNew: true }).isNew || false;
 };
 
 export default MyComponent;

@@ -1,12 +1,12 @@
-import React, { Component } from 'react';
+import React from 'react';
 
-const App = () => {
+function NewComponent() {
   const alertName = (
     param1,
     param2,
     param3
   ) => {
-    alert(param1, param2, param3);
+    alert(param1);
     console.log('success!')
   };
 
@@ -31,4 +31,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default NewComponent;
