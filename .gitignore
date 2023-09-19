@@ -134,3 +134,4 @@ dist
 *.jsx
 *.js
 *.bak
+!.eslintrc.js

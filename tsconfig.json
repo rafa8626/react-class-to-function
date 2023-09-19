@@ -7,5 +7,8 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true
-  }
+  },
+  "include": ["index.ts", "parser.ts", "__tests__/index.ts"],
+  "exclude": ["node_modules"],
+  "moduleFileExtensions": ["ts"]
 }
