@@ -1,20 +1,20 @@
-import React, { Component } from 'react';
+import React from 'react';
 
-class App extends Component {
-  function alertName = (
+class NewComponent extends React.Component {
+  alertName(
     param1,
     param2,
     param3
-  ) => {
-    alert(param1, param2, param3);
-    console.log('success!')
-  };
-
-  private async anotherMethod() {
-    console.log('test')
+  ) {
+    alert(param1);
+    console.log(param2, param3)
   }
 
-  protected function nextCall ( ) {
+  anotherMethod() {
+    this.alertName('test', 'test2', 'test3')
+  }
+
+  nextCall ( ) {
     return null;
   }
 
@@ -30,6 +30,6 @@ class App extends Component {
       </div>
     );
   }
-};
+}
 
-export default App;
+export default NewComponent;

@@ -1,12 +1,10 @@
 import { Component } from '@alpha/test';
 import b from '@beta/test';
 import {
-    c,
-    d as NewComponent,
+    c as NewComponent,
     d as FormApi,
 } from 'common/library';
-import { createRef, MutableRefObject, PureComponent, ReactElement, SetStateAction } from 'react';
-import { CONST1, CONST2 } from '../shared/library';
+import { createRef, MutableRefObject, PureComponent, ReactElement } from 'react';
 
 import './stylesheet.scss';
 export enum MyEnum {
@@ -63,7 +61,6 @@ class MyComponent extends PureComponent<Props, State> {
 
         this.loadWindow = this.loadWindow.bind(this);
         this.moreDetails = this.moreDetails.bind(this);
-        this.getResult = this.getResult.bind(this);
         this.loadData = this.loadData.bind(this);
     }
     // This is a comment that I find useful for this variable
@@ -74,7 +71,7 @@ class MyComponent extends PureComponent<Props, State> {
 
     private anotherRef: MutableRefObject<Function | null> = createRef();
     public componentDidMount(): void {
-        document.title = this.props.t('my.id');
+        document.title = this.props.t(this.myVariable);
         const { a } = this.props.match.params;
 
         this.loadData(a);
@@ -98,7 +95,7 @@ class MyComponent extends PureComponent<Props, State> {
         const { a: prevProp } = prevProps.match.params;
         const { b: prevState } = this.props.match.params;
 
-        if (a !== b) {
+        if (prevProp !== prevState) {
             this.setState((prevState) => ({
                 ...prevState,
                 a: false,
@@ -122,6 +119,8 @@ class MyComponent extends PureComponent<Props, State> {
      *
      * 
      * @param param1 Unknow string
+     * @param param2 Unknow boolean (optional)
+     * @param param3 Unknow string
      * @return void
      */
     private moreDetails(
@@ -132,14 +131,14 @@ class MyComponent extends PureComponent<Props, State> {
         this.setState(
             produce(this.state, (draftState): void => {
                 draftState.a = param1;
-                draftState.b = false;
+                draftState.b = param2;
                 draftState.c = param3;
             })
         );
     }
 
     ///-------------Function - start
-    protected async function loadData(result): Promise<void> {
+    protected async loadData(result): Promise<void> {
         this.props.load();
         this.setState({ j: result });
     }
@@ -149,12 +148,12 @@ class MyComponent extends PureComponent<Props, State> {
     render(): ReactElement {
         const list = ['apple', 'banana'];
         const {
-            b,
+            b: newB,
             f: f1,
         } = this.state;
         const {
             a,
-            b,
+            b: propB,
             c,
         } = this.props;
 
@@ -166,35 +165,41 @@ class MyComponent extends PureComponent<Props, State> {
             };
             this.setState(
                 produce(this.state, (draftState): void => {
-                    draftState.j = f1 || 'YES';
+                    draftState.j = f1 || newB;
+                    draftState.a = propB;
+                    draftState.j = myObj;
                 }),
                 () => {
-                    this.loadData(MyEnum.Test2);
+                    if (list.includes(myObj.x)) {
+                        this.loadData(MyEnum.Test2);
+                    }
                 }
             );
         };
-        const internalVar = () => this.getResult(c);
 
         return (
             <>
-                {/* HTML ------------------------ > Start */}
-                {!readOnlyMode && isDcfClosed && (
-                    <div>
-                        <h3>This is a Component</h3>
-                        <button onClick={this.alertName}>
-                        Alert
-                        </button>
-                    </div>
-                )}
+                <Component test={isNew()} ref={this.anotherRef} />
+                <NewComponent onClick={internalMethod}>
+                    {/* HTML ------------------------ > Start */}
+                    {b() && (
+                        <div>
+                            <h3>This is a Component</h3>
+                            <button onClick={this.alertName}>
+                            Alert
+                            </button>
+                        </div>
+                    )}
 
-                {/* HTML ------------------------ > End */}
+                    {/* HTML ------------------------ > End */}
+                </NewComponent>
             </>
         );
     }
 }
 
-const isNew = (x: OtherProps): boolean => {
-    return (x.items, { isNew: true });
+const isNew = (x?: OtherProps): boolean => {
+    return ((x?.items || {}), { isNew: true }).isNew || false;
 };
 
 export default MyComponent;
