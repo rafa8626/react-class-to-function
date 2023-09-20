@@ -300,11 +300,11 @@ export const convertFile = async (file: string, generateContentOnly = false): Pr
     const classes = code.getClasses();
 
     if (classes.length === 0) {
-        throw new Error('Cannot convert this file since it is not a class Component');
+        throw new Error(`${file} cannot be converted since it is not a class Component`);
     }
 
     if (classes.length > 1) {
-        throw new Error('Cannot convert this file since it contains more than 1 class');
+        throw new Error(`${file} cannot be converted since it contains more than 1 class`);
     }
 
     const node = classes[0];
