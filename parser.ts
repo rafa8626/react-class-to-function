@@ -76,7 +76,7 @@ const parseFile = (code: SourceFile, node: ClassDeclaration): ParserReturn => {
     }
 
     const extendsName = extendsClause.getFirstChild()?.getText() || '';
-    if (!acceptedExtendedClasses.includes(extendsName)) {
+    if (!/(React\.)?(Pure)?Component/.test(extendsName)) {
         throw new Error(`The class ${componentName} is not a class component.`);
     }
 
@@ -300,7 +300,7 @@ export const convertFile = async (file: string, generateContentOnly = false): Pr
     const classes = code.getClasses();
 
     if (classes.length === 0) {
-        throw new Error(`${file} cannot be converted since it is not a class Component`);
+        throw new Error(`${file} cannot be converted since it is not a Component`);
     }
 
     if (classes.length > 1) {
