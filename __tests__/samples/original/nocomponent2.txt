@@ -1,0 +1,16 @@
+class B extends A {
+  alertName = () => {
+    alert('John Doe');
+  };
+
+  return (
+    <div>
+      <h3>This is a Component</h3>
+      <button onClick={this.alertName}>
+        Alert
+      </button>
+    </div>
+  );
+}
+
+export default B;

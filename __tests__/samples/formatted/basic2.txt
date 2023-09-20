@@ -1,26 +1,21 @@
 import React from 'react';
 
 function NewComponent() {
-  const alertName = (
-    param1,
-    param2,
-    param3
-  ) => {
+  const alertName = (param1, param2, param3) => {
     alert(param1);
-    console.log('success!')
+    console.log(param2, param3)
   };
 
-  const anotherMethod = async () => {
-    console.log('test')
-  }
+  const anotherMethod = () => {
+    alertName('test', 'test2', 'test3')
+  };
 
-  const nextCall = ( ) => {
+  const nextCall = () => {
     return null;
-  }
+  };
 
   const x = nextCall ();
   const y = anotherMethod();
-
   return (
     <div>
       <h3>This is a Component</h3>
@@ -29,6 +24,6 @@ function NewComponent() {
       </button>
     </div>
   );
-};
+}
 
 export default NewComponent;
